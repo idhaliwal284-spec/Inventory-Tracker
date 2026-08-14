@@ -669,7 +669,7 @@
         }
 
         function toggleDeleteButtonsVisibility() {
-            const showDelete = currentUser && currentUser.team === "Admin";
+            const showDelete = currentUser && (currentUser.team === "Admin" || isAdminMode);
             document.querySelectorAll(".delete-cell").forEach(cell => {
                 cell.style.display = showDelete ? "table-cell" : "none";
             });
@@ -680,15 +680,19 @@
             
             const trackerInputs = document.querySelectorAll("#trackerTable input");
             trackerInputs.forEach(inp => {
-                if(team !== "Admin" && team !== "Inventory") {
+                if(team !== "Admin" && !isAdminMode && team !== "Inventory") {
                     inp.readOnly = true;
+                } else if (isAdminMode) {
+                    inp.readOnly = false;
                 }
             });
 
             const missingInputs = document.querySelectorAll("#missingTable input");
             missingInputs.forEach(inp => {
-                if(team !== "Admin" && team !== "Receiving") {
+                if(team !== "Admin" && !isAdminMode && team !== "Receiving") {
                     inp.readOnly = true;
+                } else if (isAdminMode) {
+                    inp.readOnly = false;
                 }
             });
         }
@@ -763,37 +767,37 @@
                     if (data.trackerRows && data.trackerRows.length > 0) {
                         data.trackerRows.forEach(row => {
                             const tr = document.createElement("tr");
-                            const showDel = currentUser && currentUser.team === "Admin";
+                            const showDel = currentUser && (currentUser.team === "Admin" || isAdminMode);
                             tr.innerHTML = `
                                 <td class="col-id"><input type="text" value="${row.c0 || ''}"></td>
                                 <td class="col-machine"><input type="text" value="${row.c1 || ''}"></td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c2 || ''}" ${row.c2_ro ? 'readonly' : ''} class="${row.c2_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c2 || ''}" ${row.c2_ro && !isAdminMode ? 'readonly' : ''} class="${row.c2_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c2_stamp ? `<div class="user-stamp">${row.c2_stamp}</div>` : ''}
                                 </td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c3 || ''}" ${row.c3_ro ? 'readonly' : ''} class="${row.c3_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c3 || ''}" ${row.c3_ro && !isAdminMode ? 'readonly' : ''} class="${row.c3_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c3_stamp ? `<div class="user-stamp">${row.c3_stamp}</div>` : ''}
                                 </td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c4 || ''}" ${row.c4_ro ? 'readonly' : ''} class="${row.c4_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c4 || ''}" ${row.c4_ro && !isAdminMode ? 'readonly' : ''} class="${row.c4_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c4_stamp ? `<div class="user-stamp">${row.c4_stamp}</div>` : ''}
                                 </td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c5 || ''}" ${row.c5_ro ? 'readonly' : ''} class="${row.c5_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c5 || ''}" ${row.c5_ro && !isAdminMode ? 'readonly' : ''} class="${row.c5_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c5_stamp ? `<div class="user-stamp">${row.c5_stamp}</div>` : ''}
                                 </td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c6 || ''}" ${row.c6_ro ? 'readonly' : ''} class="${row.c6_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c6 || ''}" ${row.c6_ro && !isAdminMode ? 'readonly' : ''} class="${row.c6_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c6_stamp ? `<div class="user-stamp">${row.c6_stamp}</div>` : ''}
                                 </td>
                                 <td><input type="text" value="${row.c7 || ''}"></td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c8 || ''}" ${row.c8_ro ? 'readonly' : ''} class="${row.c8_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c8 || ''}" ${row.c8_ro && !isAdminMode ? 'readonly' : ''} class="${row.c8_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c8_stamp ? `<div class="user-stamp">${row.c8_stamp}</div>` : ''}
                                 </td>
                                 <td class="col-date">
-                                    <input type="date" value="${row.c9 || ''}" ${row.c9_ro ? 'readonly' : ''} class="${row.c9_lk ? 'locked' : ''}" required>
+                                    <input type="date" value="${row.c9 || ''}" ${row.c9_ro && !isAdminMode ? 'readonly' : ''} class="${row.c9_lk && !isAdminMode ? 'locked' : ''}" required>
                                     ${row.c9_stamp ? `<div class="user-stamp">${row.c9_stamp}</div>` : ''}
                                 </td>
                                 <td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteTrackerRow(this)">Delete</button></td>
@@ -840,9 +844,9 @@
                             for(let i=0; i<soCount; i++) {
                                 html += `<td class="mp-so"><input type="text" value="${rowData[8 + i] || ''}"></td>`;
                             }
-                            html += `<td class="mp-arrived"><input type="text" value="${rowData[rowData.length - 1] || ''}"></td>`;
+                            html += `<td class="mp-arrived"><input type="text" value="${rowData[rowData.length - (currentUser && (currentUser.team === "Admin" || isAdminMode) ? 2 : 1)] || ''}"></td>`;
                             
-                            const showDel = currentUser && currentUser.team === "Admin";
+                            const showDel = currentUser && (currentUser.team === "Admin" || isAdminMode);
                             html += `<td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteMissingRow(this)">Delete</button></td>`;
 
                             tr.innerHTML = html;
@@ -856,6 +860,7 @@
                     addMissingRow();
                 }
                 updateInputAccessControls();
+                toggleDeleteButtonsVisibility();
             } catch (e) {
                 console.error("Error loading data from Firebase: ", e);
                 addTrackerRow();
@@ -871,11 +876,17 @@
                     adminBtn.textContent = "Admin Edit: ON";
                     adminBtn.classList.add("on");
                     
-                    const allDates = document.querySelectorAll('#trackerTable input[type="date"]');
-                    allDates.forEach(dateInput => {
-                        dateInput.readOnly = false;
-                        dateInput.classList.remove("locked");
+                    const allInputs = document.querySelectorAll('table input');
+                    allInputs.forEach(input => {
+                        input.readOnly = false;
+                        if(input.type === "date") {
+                            input.classList.remove("locked");
+                        }
                     });
+                    
+                    document.getElementById("trackerDelHeader").style.display = "table-cell";
+                    document.getElementById("missingDelHeader").style.display = "table-cell";
+                    toggleDeleteButtonsVisibility();
                 } else if (pwd !== null) {
                     alert("Incorrect password.");
                 }
@@ -891,6 +902,14 @@
                         dateInput.classList.add("locked");
                     }
                 });
+
+                if(currentUser && currentUser.team !== "Admin") {
+                    document.getElementById("trackerDelHeader").style.display = "none";
+                    document.getElementById("missingDelHeader").style.display = "none";
+                }
+                
+                updateInputAccessControls();
+                toggleDeleteButtonsVisibility();
                 saveDataToFirebase();
             }
         });
@@ -898,7 +917,7 @@
         document.querySelector("#trackerTable tbody").addEventListener("mousedown", function(event) {
             const element = event.target;
             if (!currentUser) return;
-            if (currentUser.team !== "Admin" && currentUser.team !== "Inventory") return;
+            if (currentUser.team !== "Admin" && !isAdminMode && currentUser.team !== "Inventory") return;
             if (isAdminMode) return; 
 
             if (element.tagName === "INPUT" && element.type === "date" && !element.readOnly) {
@@ -943,27 +962,27 @@
 
         document.addEventListener("change", function(e) {
             if(!currentUser) return;
-            if(currentUser.team === "Production") return;
+            if(currentUser.team === "Production" && !isAdminMode) return;
             saveDataToFirebase();
         });
 
         document.addEventListener("blur", function(e) {
             if(!currentUser) return;
-            if(currentUser.team === "Production") return;
+            if(currentUser.team === "Production" && !isAdminMode) return;
             if(e.target.tagName === "INPUT") {
                 saveDataToFirebase();
             }
         }, true);
 
         function addTrackerRow() {
-            if(currentUser && currentUser.team !== "Admin" && currentUser.team !== "Inventory") {
+            if(currentUser && currentUser.team !== "Admin" && !isAdminMode && currentUser.team !== "Inventory") {
                 alert("You do not have permission to add rows here.");
                 return;
             }
 
             const tbody = document.querySelector("#trackerTable tbody");
             const newRow = document.createElement("tr");
-            const showDel = currentUser && currentUser.team === "Admin";
+            const showDel = currentUser && (currentUser.team === "Admin" || isAdminMode);
 
             newRow.innerHTML = `
                 <td class="col-id"><input type="text" placeholder="..."></td>
@@ -983,7 +1002,7 @@
         }
 
         function deleteTrackerRow(button) {
-            if(!currentUser || currentUser.team !== "Admin") {
+            if(!currentUser || (currentUser.team !== "Admin" && !isAdminMode)) {
                 alert("Only Admin can delete rows.");
                 return;
             }
@@ -993,7 +1012,7 @@
         }
 
         function addSOColumn() {
-            if(currentUser && currentUser.team !== "Admin" && currentUser.team !== "Receiving") {
+            if(currentUser && currentUser.team !== "Admin" && !isAdminMode && currentUser.team !== "Receiving") {
                 alert("You do not have permission to add SO columns.");
                 return;
             }
@@ -1014,14 +1033,14 @@
                 const newTd = document.createElement('td');
                 newTd.className = 'mp-so';
                 newTd.innerHTML = `<input type="text">`;
-                // Insert right before the last column (which is delete or arrived)
-                row.insertBefore(newTd, row.cells[row.cells.length - (currentUser && currentUser.team === "Admin" ? 2 : 1)]);
+                const showDel = currentUser && (currentUser.team === "Admin" || isAdminMode);
+                row.insertBefore(newTd, row.cells[row.cells.length - (showDel ? 2 : 1)]);
             });
             saveDataToFirebase();
         }
 
         function addMissingRow() {
-            if(currentUser && currentUser.team !== "Admin" && currentUser.team !== "Receiving") {
+            if(currentUser && currentUser.team !== "Admin" && !isAdminMode && currentUser.team !== "Receiving") {
                 alert("You do not have permission to add rows here.");
                 return;
             }
@@ -1048,7 +1067,7 @@
             }
 
             html += `<td class="mp-arrived"><input type="text"></td>`;
-            const showDel = currentUser && currentUser.team === "Admin";
+            const showDel = currentUser && (currentUser.team === "Admin" || isAdminMode);
             html += `<td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteMissingRow(this)">Delete</button></td>`;
 
             newRow.innerHTML = html;
@@ -1057,7 +1076,7 @@
         }
 
         function deleteMissingRow(button) {
-            if(!currentUser || currentUser.team !== "Admin") {
+            if(!currentUser || (currentUser.team !== "Admin" && !isAdminMode)) {
                 alert("Only Admin can delete rows.");
                 return;
             }
