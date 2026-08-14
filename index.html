@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard & Tracker with Firebase</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Tab Navigation Styling */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            background-color: #ddd;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: #fff;
+            border-bottom: 3px solid #4CAF50;
+            color: #333;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #444;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+
+        .admin-btn {
+            position: absolute;
+            right: 0;
+            padding: 10px 20px;
+            background-color: #607d8b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .admin-btn:hover {
+            background-color: #546e7a;
+        }
+
+        .admin-btn:active {
+            transform: scale(0.95);
+        }
+
+        .admin-btn.on {
+            background-color: #f44336; 
+        }
+
+        .admin-btn.on:hover {
+            background-color: #d32f2f;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* --- Project Tracker Styling --- */
+        .col-id input {
+            background-color: #92d050; 
+            font-weight: bold;
+            color: #000;
+        }
+
+        .col-machine input {
+            background-color: #ffc000; 
+            font-weight: bold;
+            color: #000;
+        }
+
+        .col-date input[type="date"] {
+            background-color: #5b9bd5; 
+            cursor: pointer;
+        }
+
+        /* --- Missing Parts Styling --- */
+        .group-procurement { background-color: #d9e1f2 !important; font-size: 15px; }
+        .group-inventory { background-color: #b4c6e7 !important; font-size: 15px; }
+        
+        .mp-part input { background-color: #92d050; font-weight: bold; color: #000; }
+        .mp-from input, .mp-status input { background-color: #92d050; color: #000; }
+        .mp-po input, .mp-notes input, .mp-eta input { background-color: #ffe699; color: #000; }
+        .mp-ip-status input { background-color: #b4c6e7; color: #000; }
+        .mp-so input { background-color: #7f7f7f; color: #fff; font-weight: bold; }
+        .mp-arrived input { background-color: #92d050; font-weight: bold; color: #000; }
+
+        /* Generic input styling */
+        input[type="text"], input[type="date"] {
+            width: 90%;
+            padding: 8px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+        }
+
+        input[type="text"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #666;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        /* Hide calendar icon initially */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(1);
+            opacity: 0; 
+            transition: opacity 0.2s;
+        }
+
+        input[type="date"]:not(.locked):hover::-webkit-calendar-picker-indicator {
+            opacity: 1; 
+        }
+        
+        input[type="date"]:invalid {
+            color: transparent;
+        }
+        
+        .col-date input[type="date"]:valid,
+        .col-date input[type="date"].locked {
+            background-color: #a9dfbf !important; 
+            color: #333 !important; 
+            font-weight: bold;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        input[type="date"].locked {
+            cursor: not-allowed;
+        }
+        
+        input[type="date"].locked::-webkit-calendar-picker-indicator {
+            display: none; 
+        }
+
+        /* Add Row / Column Buttons */
+        .action-container {
+            margin-top: 15px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .add-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.2s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-btn:hover { background-color: #45a049; }
+        .add-btn:active { transform: scale(0.95); }
+
+        /* Custom Modal Styling */
+        .modal-overlay {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 1000;
+        }
+
+        .modal-box {
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 8px; 
+            text-align: center; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            font-family: inherit;
+        }
+
+        .modal-box p {
+            margin-top: 0;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-btn {
+            padding: 10px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .modal-btn:hover { opacity: 0.8; }
+        .btn-yes { background-color: #4CAF50; color: white; }
+        .btn-no { background-color: #f44336; color: white; }
+        
+    </style>
+</head>
+<body>
+
+    <!-- Tab Buttons -->
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="switchTab('trackerTabContent', this)">Project Tracker</button>
+        <button class="tab-btn" onclick="switchTab('missingTabContent', this)">Missing Parts</button>
+    </div>
+
+    <!-- ================= TAB 1: PROJECT TRACKER ================= -->
+    <div id="trackerTabContent" class="tab-content active">
+        <div class="header-container">
+            <h1>TRACKER</h1>
+            <button id="adminToggle" class="admin-btn">Admin Edit: OFF</button>
+        </div>
+
+        <div class="table-container">
+            <table id="trackerTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Machine / Customer</th>
+                        <th>Kick OFF</th>
+                        <th>Mo's</th>
+                        <th>Pick for IT</th>
+                        <th>Pick for PROD.</th>
+                        <th>Delivered TO PROD.</th>
+                        <th>MISSING (IF YES)</th>
+                        <th>DONE</th>
+                        <th>Shipping Kit To QC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamically populated from Firebase -->
+                </tbody>
+            </table>
+
+            <div class="action-container">
+                <button class="add-btn" onclick="addTrackerRow()" title="Add New Row">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TAB 2: MISSING PARTS ================= -->
+    <div id="missingTabContent" class="tab-content">
+        <div class="header-container">
+            <h1>MISSING PARTS TRACKER</h1>
+        </div>
+
+        <div class="table-container">
+            <table id="missingTable">
+                <thead>
+                    <tr>
+                        <th colspan="6" class="group-procurement">Procurement</th>
+                        <th colspan="2" class="group-inventory">Inventory</th>
+                        <th colspan="2" id="soHeaderGroup" class="group-so">Customer / SO Section <button onclick="addSOColumn()" style="background:#4CAF50; color:white; border:none; border-radius:4px; padding:2px 8px; cursor:pointer; margin-left:10px;" title="Add SO Column">+</button></th>
+                        <th rowspan="2" style="background:#92d050;">Arrived QTY</th>
+                    </tr>
+                    <tr id="missingSubHeader">
+                        <th class="mp-part">Part #</th>
+                        <th class="mp-from">From</th>
+                        <th class="mp-status">Status</th>
+                        <th class="mp-po">Purchase Order #</th>
+                        <th class="mp-notes">Notes / Comments From Procurement</th>
+                        <th class="mp-eta">ETA</th>
+                        <th class="mp-ip-status">Status of PO (Kaleab)</th>
+                        <th class="mp-ip-status">Status Of Picking</th>
+                        <th class="mp-so"><input type="text" value="HCL TECH" style="background:#7f7f7f; color:white; border:none; text-align:center; font-weight:bold;"></th>
+                        <th class="mp-so"><input type="text" value="LOWES" style="background:#7f7f7f; color:white; border:none; text-align:center; font-weight:bold;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamically populated from Firebase -->
+                </tbody>
+            </table>
+
+            <div class="action-container">
+                <button class="add-btn" onclick="addMissingRow()" title="Add New Part Row">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Validation Popup -->
+    <div id="validationModal" class="modal-overlay">
+        <div class="modal-box">
+            <p>Do you really want to validate?</p>
+            <button class="modal-btn btn-yes" id="btnYes">YES</button>
+            <button class="modal-btn btn-no" id="btnNo">NO</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Setup -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCA4fc19l4ZWFNn82RXJZdkar0yX1PslVk",
+            authDomain: "inventory-tracker-a2a8e.firebaseapp.com",
+            projectId: "inventory-tracker-a2a8e",
+            storageBucket: "inventory-tracker-a2a8e.firebasestorage.app",
+            messagingSenderId: "223209852536",
+            appId: "1:223209852536:web:e5fc7043d0deb3c17d278d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+
+        // Load Initial Data from Firestore on Startup
+        loadDataFromFirebase();
+    </script>
+
+    <script>
+        // Tab Switching Logic
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // Modal & State Variables
+        const modal = document.getElementById('validationModal');
+        const btnYes = document.getElementById('btnYes');
+        const btnNo = document.getElementById('btnNo');
+        const adminBtn = document.getElementById('adminToggle');
+        
+        let activeCell = null;
+        let isAdminMode = false;
+
+        // --- Save Data to Firebase ---
+        function saveDataToFirebase() {
+            if (!window.db) return;
+
+            // Gather Project Tracker Data
+            const trackerRows = [];
+            document.querySelectorAll("#trackerTable tbody tr").forEach(tr => {
+                const rowData = [];
+                tr.querySelectorAll("input").forEach(input => {
+                    rowData.push({
+                        value: input.value,
+                        readOnly: input.readOnly,
+                        locked: input.classList.contains("locked")
+                    });
+                });
+                trackerRows.push(rowData);
+            });
+
+            // Gather Missing Parts Headers & Data
+            const missingHeaders = [];
+            document.querySelectorAll("#missingSubHeader .mp-so input").forEach(input => {
+                missingHeaders.push(input.value);
+            });
+
+            const missingRows = [];
+            document.querySelectorAll("#missingTable tbody tr").forEach(tr => {
+                const rowData = [];
+                tr.querySelectorAll("input").forEach(input => {
+                    rowData.push(input.value);
+                });
+                missingRows.push(rowData);
+            });
+
+            // Push to Firestore
+            window.setDoc(window.doc(window.db, "dashboards", "mainData"), {
+                trackerRows: trackerRows,
+                missingHeaders: missingHeaders,
+                missingRows: missingRows
+            }).catch(error => console.error("Error saving to Firebase: ", error));
+        }
+
+        // --- Load Data from Firebase ---
+        async function loadDataFromFirebase() {
+            try {
+                const docSnap = await window.getDoc(window.doc(window.db, "dashboards", "mainData"));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+
+                    // Rebuild Tracker Table
+                    const trackerTbody = document.querySelector("#trackerTable tbody");
+                    trackerTbody.innerHTML = "";
+                    if (data.trackerRows && data.trackerRows.length > 0) {
+                        data.trackerRows.forEach(rowData => {
+                            const tr = document.createElement("tr");
+                            tr.innerHTML = `
+                                <td class="col-id"><input type="text" value="${rowData[0]?.value || ''}"></td>
+                                <td class="col-machine"><input type="text" value="${rowData[1]?.value || ''}"></td>
+                                <td class="col-date"><input type="date" value="${rowData[2]?.value || ''}" ${rowData[2]?.readOnly ? 'readonly' : ''} class="${rowData[2]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${rowData[3]?.value || ''}" ${rowData[3]?.readOnly ? 'readonly' : ''} class="${rowData[3]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${rowData[4]?.value || ''}" ${rowData[4]?.readOnly ? 'readonly' : ''} class="${rowData[4]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${rowData[5]?.value || ''}" ${rowData[5]?.readOnly ? 'readonly' : ''} class="${rowData[5]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${rowData[6]?.value || ''}" ${rowData[6]?.readOnly ? 'readonly' : ''} class="${rowData[6]?.locked ? 'locked' : ''}" required></td>
+                                <td><input type="text" value="${rowData[7]?.value || ''}"></td>
+                                <td class="col-date"><input type="date" value="${rowData[8]?.value || ''}" ${rowData[8]?.readOnly ? 'readonly' : ''} class="${rowData[8]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${rowData[9]?.value || ''}" ${rowData[9]?.readOnly ? 'readonly' : ''} class="${rowData[9]?.locked ? 'locked' : ''}" required></td>
+                            `;
+                            trackerTbody.appendChild(tr);
+                        });
+                    } else {
+                        addTrackerRow();
+                    }
+
+                    // Rebuild Missing Parts Table Headers & Rows
+                    if (data.missingHeaders) {
+                        const headerRow = document.getElementById('missingSubHeader');
+                        // Remove existing dynamic SO headers
+                        headerRow.querySelectorAll('.mp-so').forEach(el => el.remove());
+                        
+                        const colspanHeader = document.getElementById('soHeaderGroup');
+                        colspanHeader.setAttribute('colspan', data.missingHeaders.length);
+
+                        data.missingHeaders.forEach(headerVal => {
+                            const newTh = document.createElement('th');
+                            newTh.className = 'mp-so';
+                            newTh.innerHTML = `<input type="text" value="${headerVal}" style="background:#7f7f7f; color:white; border:none; text-align:center; font-weight:bold;">`;
+                            headerRow.insertBefore(newTh, headerRow.lastElementChild);
+                        });
+                    }
+
+                    const missingTbody = document.querySelector("#missingTable tbody");
+                    missingTbody.innerHTML = "";
+                    if (data.missingRows && data.missingRows.length > 0) {
+                        data.missingRows.forEach(rowData => {
+                            const tr = document.createElement("tr");
+                            let html = `
+                                <td class="mp-part"><input type="text" value="${rowData[0] || ''}"></td>
+                                <td class="mp-from"><input type="text" value="${rowData[1] || ''}"></td>
+                                <td class="mp-status"><input type="text" value="${rowData[2] || ''}"></td>
+                                <td class="mp-po"><input type="text" value="${rowData[3] || ''}"></td>
+                                <td class="mp-notes"><input type="text" value="${rowData[4] || ''}"></td>
+                                <td class="mp-eta"><input type="date" value="${rowData[5] || ''}"></td>
+                                <td class="mp-ip-status"><input type="text" value="${rowData[6] || ''}"></td>
+                                <td class="mp-ip-status"><input type="text" value="${rowData[7] || ''}"></td>
+                            `;
+                            
+                            const soCount = document.querySelectorAll('#missingSubHeader .mp-so').length;
+                            for(let i=0; i<soCount; i++) {
+                                html += `<td class="mp-so"><input type="text" value="${rowData[8 + i] || ''}"></td>`;
+                            }
+                            html += `<td class="mp-arrived"><input type="text" value="${rowData[rowData.length - 1] || ''}"></td>`;
+
+                            tr.innerHTML = html;
+                            missingTbody.appendChild(tr);
+                        });
+                    } else {
+                        addMissingRow();
+                    }
+                } else {
+                    addTrackerRow();
+                    addMissingRow();
+                }
+            } catch (e) {
+                console.error("Error loading data from Firebase: ", e);
+                addTrackerRow();
+                addMissingRow();
+            }
+        }
+
+        // --- Admin Mode Logic ---
+        adminBtn.addEventListener('click', function() {
+            if (!isAdminMode) {
+                const pwd = prompt("Enter Admin Password:");
+                if (pwd === "12345") {
+                    isAdminMode = true;
+                    adminBtn.textContent = "Admin Edit: ON";
+                    adminBtn.classList.add("on");
+                    
+                    const allDates = document.querySelectorAll('#trackerTable input[type="date"]');
+                    allDates.forEach(dateInput => {
+                        dateInput.readOnly = false;
+                        dateInput.classList.remove("locked");
+                    });
+                } else if (pwd !== null) {
+                    alert("Incorrect password.");
+                }
+            } else {
+                isAdminMode = false;
+                adminBtn.textContent = "Admin Edit: OFF";
+                adminBtn.classList.remove("on");
+                
+                const allDates = document.querySelectorAll('#trackerTable input[type="date"]');
+                allDates.forEach(dateInput => {
+                    if (dateInput.value !== "") {
+                        dateInput.readOnly = true;
+                        dateInput.classList.add("locked");
+                    }
+                });
+                saveDataToFirebase();
+            }
+        });
+
+        // --- Date Selection Logic (Tracker) ---
+        document.querySelector("#trackerTable tbody").addEventListener("mousedown", function(event) {
+            const element = event.target;
+            if (isAdminMode) return; 
+
+            if (element.tagName === "INPUT" && element.type === "date" && !element.readOnly) {
+                event.preventDefault(); 
+                activeCell = element;   
+                modal.style.display = "flex"; 
+            }
+        });
+
+        btnYes.addEventListener("click", function() {
+            if (activeCell) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                
+                activeCell.value = `${yyyy}-${mm}-${dd}`;
+                activeCell.readOnly = true;
+                activeCell.classList.add("locked");
+                saveDataToFirebase();
+            }
+            modal.style.display = "none";
+            activeCell = null;
+        });
+
+        btnNo.addEventListener("click", function() {
+            modal.style.display = "none";
+            activeCell = null;
+        });
+
+        // Auto-save on standard input text changes
+        document.addEventListener("change", function() {
+            saveDataToFirebase();
+        });
+
+        document.addEventListener("blur", function(e) {
+            if(e.target.tagName === "INPUT") {
+                saveDataToFirebase();
+            }
+        }, true);
+
+        // --- Add Row Logic (Tracker) ---
+        function addTrackerRow() {
+            const tbody = document.querySelector("#trackerTable tbody");
+            const newRow = document.createElement("tr");
+
+            newRow.innerHTML = `
+                <td class="col-id"><input type="text" placeholder="..."></td>
+                <td class="col-machine"><input type="text" placeholder="..."></td>
+                <td class="col-date"><input type="date" required></td>
+                <td class="col-date"><input type="date" required></td>
+                <td class="col-date"><input type="date" required></td>
+                <td class="col-date"><input type="date" required></td>
+                <td class="col-date"><input type="date" required></td>
+                <td><input type="text" placeholder="..."></td>
+                <td class="col-date"><input type="date" required></td>
+                <td class="col-date"><input type="date" required></td>
+            `;
+            tbody.appendChild(newRow);
+            saveDataToFirebase();
+        }
+
+        // --- Missing Parts: Add SO Column ---
+        function addSOColumn() {
+            const headerRow = document.getElementById('missingSubHeader');
+            const colspanHeader = document.getElementById('soHeaderGroup');
+            
+            const currentCols = parseInt(colspanHeader.getAttribute('colspan')) || 2;
+            colspanHeader.setAttribute('colspan', currentCols + 1);
+
+            const newTh = document.createElement('th');
+            newTh.className = 'mp-so';
+            newTh.innerHTML = `<input type="text" placeholder="NEW SO" style="background:#7f7f7f; color:white; border:none; text-align:center; font-weight:bold;">`;
+            headerRow.insertBefore(newTh, headerRow.lastElementChild);
+
+            const rows = document.querySelectorAll("#missingTable tbody tr");
+            rows.forEach(row => {
+                const newTd = document.createElement('td');
+                newTd.className = 'mp-so';
+                newTd.innerHTML = `<input type="text">`;
+                row.insertBefore(newTd, row.lastElementChild);
+            });
+            saveDataToFirebase();
+        }
+
+        // --- Missing Parts: Add Row ---
+        function addMissingRow() {
+            const tbody = document.querySelector("#missingTable tbody");
+            const firstRow = tbody.querySelector("tr");
+            const soCount = firstRow ? firstRow.querySelectorAll('.mp-so').length : 2;
+
+            const newRow = document.createElement("tr");
+            
+            let html = `
+                <td class="mp-part"><input type="text"></td>
+                <td class="mp-from"><input type="text"></td>
+                <td class="mp-status"><input type="text"></td>
+                <td class="mp-po"><input type="text"></td>
+                <td class="mp-notes"><input type="text"></td>
+                <td class="mp-eta"><input type="date"></td>
+                <td class="mp-ip-status"><input type="text"></td>
+                <td class="mp-ip-status"><input type="text"></td>
+            `;
+
+            for(let i=0; i<soCount; i++) {
+                html += `<td class="mp-so"><input type="text"></td>`;
+            }
+
+            html += `<td class="mp-arrived"><input type="text"></td>`;
+
+            newRow.innerHTML = html;
+            tbody.appendChild(newRow);
+            saveDataToFirebase();
+        }
+    </script>
+</body>
+</html>
