@@ -257,6 +257,20 @@
             display: inline-block;
         }
 
+        /* Delete row button style */
+        .delete-row-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        .delete-row-btn:hover { background-color: #d32f2f; }
+
         /* --- Missing Parts Styling --- */
         .group-procurement { background-color: #d9e1f2 !important; font-size: 15px; }
         .group-inventory { background-color: #b4c6e7 !important; font-size: 15px; }
@@ -457,6 +471,7 @@
                             <th>MISSING (IF YES)</th>
                             <th>DONE</th>
                             <th>Shipping Kit To QC</th>
+                            <th id="trackerDelHeader" style="display:none;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -484,6 +499,7 @@
                             <th colspan="2" class="group-inventory">Inventory</th>
                             <th colspan="2" id="soHeaderGroup" class="group-so">Customer / SO Section <button id="soAddColBtn" onclick="addSOColumn()" style="background:#4CAF50; color:white; border:none; border-radius:4px; padding:2px 8px; cursor:pointer; margin-left:10px; display:none;" title="Add SO Column">+</button></th>
                             <th rowspan="2" style="background:#92d050;">Arrived QTY</th>
+                            <th rowspan="2" id="missingDelHeader" style="background:#f44336; color:white; display:none;">Action</th>
                         </tr>
                         <tr id="missingSubHeader">
                             <th class="mp-part">Part #</th>
@@ -542,18 +558,15 @@
         window.setDoc = setDoc;
         window.getDoc = getDoc;
 
-        // Load data on startup
         loadDataFromFirebase();
     </script>
 
     <script>
-        // Session State & Users Database
         let currentUser = null;
         let usersList = [
             { username: "Ishan", pass: "12345", team: "Admin", initials: "Ishan" }
         ];
 
-        // Load users from LocalStorage if available
         const savedUsers = localStorage.getItem("trackerUsers");
         if(savedUsers) {
             usersList = JSON.parse(savedUsers);
@@ -614,20 +627,22 @@
             container.innerHTML = "<b>Existing Users:</b> " + usersList.map(us => `${us.username} (${us.team})`).join(", ");
         }
 
-        // --- Role & Permission Handler ---
         function applyUserPermissions() {
             const adminBtn = document.getElementById("adminToggle");
             const adminPanel = document.getElementById("adminUserPanel");
             const trackerAdd = document.getElementById("trackerAddRowContainer");
             const missingAdd = document.getElementById("missingAddRowContainer");
             const soAddBtn = document.getElementById("soAddColBtn");
+            const trackerDelHead = document.getElementById("trackerDelHeader");
+            const missingDelHead = document.getElementById("missingDelHeader");
 
-            // Reset elements visibility
             adminBtn.style.display = "none";
             adminPanel.style.display = "none";
             trackerAdd.style.display = "none";
             missingAdd.style.display = "none";
             soAddBtn.style.display = "none";
+            trackerDelHead.style.display = "none";
+            missingDelHead.style.display = "none";
 
             const team = currentUser.team;
 
@@ -637,44 +652,42 @@
                 trackerAdd.style.display = "flex";
                 missingAdd.style.display = "flex";
                 soAddBtn.style.display = "inline-block";
+                trackerDelHead.style.display = "table-cell";
+                missingDelHead.style.display = "table-cell";
                 renderUserList();
             } else if(team === "Inventory") {
-                // Inventory has access to edit project tracker
                 trackerAdd.style.display = "flex";
             } else if(team === "Receiving") {
-                // Receiving has access to edit missing part page
                 missingAdd.style.display = "flex";
                 soAddBtn.style.display = "inline-block";
             } else if(team === "Production") {
-                // Production group should have only the view access for all pages
-                // No action buttons shown
+                // View only
             }
 
-            // Apply input edit locks based on permissions per page
             updateInputAccessControls();
+            toggleDeleteButtonsVisibility();
+        }
+
+        function toggleDeleteButtonsVisibility() {
+            const showDelete = currentUser && currentUser.team === "Admin";
+            document.querySelectorAll(".delete-cell").forEach(cell => {
+                cell.style.display = showDelete ? "table-cell" : "none";
+            });
         }
 
         function updateInputAccessControls() {
             const team = currentUser ? currentUser.team : "";
             
-            // Project Tracker inputs editability
             const trackerInputs = document.querySelectorAll("#trackerTable input");
             trackerInputs.forEach(inp => {
-                if(team === "Admin" || team === "Inventory") {
-                    // Allowed to edit depending on admin mode or direct rules
-                } else {
-                    // View only for others on project tracker
+                if(team !== "Admin" && team !== "Inventory") {
                     inp.readOnly = true;
                 }
             });
 
-            // Missing Parts inputs editability
             const missingInputs = document.querySelectorAll("#missingTable input");
             missingInputs.forEach(inp => {
-                if(team === "Admin" || team === "Receiving") {
-                    // Allowed to edit missing parts
-                } else {
-                    // View only for others on missing parts
+                if(team !== "Admin" && team !== "Receiving") {
                     inp.readOnly = true;
                 }
             });
@@ -750,6 +763,7 @@
                     if (data.trackerRows && data.trackerRows.length > 0) {
                         data.trackerRows.forEach(row => {
                             const tr = document.createElement("tr");
+                            const showDel = currentUser && currentUser.team === "Admin";
                             tr.innerHTML = `
                                 <td class="col-id"><input type="text" value="${row.c0 || ''}"></td>
                                 <td class="col-machine"><input type="text" value="${row.c1 || ''}"></td>
@@ -782,6 +796,7 @@
                                     <input type="date" value="${row.c9 || ''}" ${row.c9_ro ? 'readonly' : ''} class="${row.c9_lk ? 'locked' : ''}" required>
                                     ${row.c9_stamp ? `<div class="user-stamp">${row.c9_stamp}</div>` : ''}
                                 </td>
+                                <td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteTrackerRow(this)">Delete</button></td>
                             `;
                             trackerTbody.appendChild(tr);
                         });
@@ -826,6 +841,9 @@
                                 html += `<td class="mp-so"><input type="text" value="${rowData[8 + i] || ''}"></td>`;
                             }
                             html += `<td class="mp-arrived"><input type="text" value="${rowData[rowData.length - 1] || ''}"></td>`;
+                            
+                            const showDel = currentUser && currentUser.team === "Admin";
+                            html += `<td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteMissingRow(this)">Delete</button></td>`;
 
                             tr.innerHTML = html;
                             missingTbody.appendChild(tr);
@@ -880,10 +898,7 @@
         document.querySelector("#trackerTable tbody").addEventListener("mousedown", function(event) {
             const element = event.target;
             if (!currentUser) return;
-            
-            // Check permissions for editing Project Tracker
             if (currentUser.team !== "Admin" && currentUser.team !== "Inventory") return;
-
             if (isAdminMode) return; 
 
             if (element.tagName === "INPUT" && element.type === "date" && !element.readOnly) {
@@ -905,7 +920,6 @@
                 activeCell.readOnly = true;
                 activeCell.classList.add("locked");
 
-                // Add or update user stamp
                 let stamp = activeStampContainer.querySelector(".user-stamp");
                 if(!stamp) {
                     stamp = document.createElement("div");
@@ -929,8 +943,7 @@
 
         document.addEventListener("change", function(e) {
             if(!currentUser) return;
-            // Restrict changes based on team roles
-            if(currentUser.team === "Production") return; // View only
+            if(currentUser.team === "Production") return;
             saveDataToFirebase();
         });
 
@@ -950,6 +963,7 @@
 
             const tbody = document.querySelector("#trackerTable tbody");
             const newRow = document.createElement("tr");
+            const showDel = currentUser && currentUser.team === "Admin";
 
             newRow.innerHTML = `
                 <td class="col-id"><input type="text" placeholder="..."></td>
@@ -962,8 +976,19 @@
                 <td><input type="text" placeholder="..."></td>
                 <td class="col-date"><input type="date" required></td>
                 <td class="col-date"><input type="date" required></td>
+                <td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteTrackerRow(this)">Delete</button></td>
             `;
             tbody.appendChild(newRow);
+            saveDataToFirebase();
+        }
+
+        function deleteTrackerRow(button) {
+            if(!currentUser || currentUser.team !== "Admin") {
+                alert("Only Admin can delete rows.");
+                return;
+            }
+            const row = button.closest("tr");
+            row.remove();
             saveDataToFirebase();
         }
 
@@ -989,7 +1014,8 @@
                 const newTd = document.createElement('td');
                 newTd.className = 'mp-so';
                 newTd.innerHTML = `<input type="text">`;
-                row.insertBefore(newTd, row.lastElementChild);
+                // Insert right before the last column (which is delete or arrived)
+                row.insertBefore(newTd, row.cells[row.cells.length - (currentUser && currentUser.team === "Admin" ? 2 : 1)]);
             });
             saveDataToFirebase();
         }
@@ -1022,9 +1048,21 @@
             }
 
             html += `<td class="mp-arrived"><input type="text"></td>`;
+            const showDel = currentUser && currentUser.team === "Admin";
+            html += `<td class="delete-cell" style="display: ${showDel ? 'table-cell' : 'none'};"><button class="delete-row-btn" onclick="deleteMissingRow(this)">Delete</button></td>`;
 
             newRow.innerHTML = html;
             tbody.appendChild(newRow);
+            saveDataToFirebase();
+        }
+
+        function deleteMissingRow(button) {
+            if(!currentUser || currentUser.team !== "Admin") {
+                alert("Only Admin can delete rows.");
+                return;
+            }
+            const row = button.closest("tr");
+            row.remove();
             saveDataToFirebase();
         }
     </script>
