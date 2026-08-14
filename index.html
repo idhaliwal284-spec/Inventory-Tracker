@@ -385,12 +385,10 @@
         window.setDoc = setDoc;
         window.getDoc = getDoc;
 
-        // Load Initial Data from Firestore on Startup
         loadDataFromFirebase();
     </script>
 
     <script>
-        // Tab Switching Logic
         function switchTab(tabId, btnElement) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -399,7 +397,6 @@
             btnElement.classList.add('active');
         }
 
-        // Modal & State Variables
         const modal = document.getElementById('validationModal');
         const btnYes = document.getElementById('btnYes');
         const btnNo = document.getElementById('btnNo');
@@ -408,25 +405,27 @@
         let activeCell = null;
         let isAdminMode = false;
 
-        // --- Save Data to Firebase ---
         function saveDataToFirebase() {
             if (!window.db) return;
 
-            // Gather Project Tracker Data
+            // Gather Project Tracker Data as flat objects to prevent nesting errors
             const trackerRows = [];
             document.querySelectorAll("#trackerTable tbody tr").forEach(tr => {
-                const rowData = [];
-                tr.querySelectorAll("input").forEach(input => {
-                    rowData.push({
-                        value: input.value,
-                        readOnly: input.readOnly,
-                        locked: input.classList.contains("locked")
-                    });
+                const inputs = tr.querySelectorAll("input");
+                trackerRows.push({
+                    c0: inputs[0].value,
+                    c1: inputs[1].value,
+                    c2: inputs[2].value, c2_ro: inputs[2].readOnly, c2_lk: inputs[2].classList.contains("locked"),
+                    c3: inputs[3].value, c3_ro: inputs[3].readOnly, c3_lk: inputs[3].classList.contains("locked"),
+                    c4: inputs[4].value, c4_ro: inputs[4].readOnly, c4_lk: inputs[4].classList.contains("locked"),
+                    c5: inputs[5].value, c5_ro: inputs[5].readOnly, c5_lk: inputs[5].classList.contains("locked"),
+                    c6: inputs[6].value, c6_ro: inputs[6].readOnly, c6_lk: inputs[6].classList.contains("locked"),
+                    c7: inputs[7].value,
+                    c8: inputs[8].value, c8_ro: inputs[8].readOnly, c8_lk: inputs[8].classList.contains("locked"),
+                    c9: inputs[9].value, c9_ro: inputs[9].readOnly, c9_lk: inputs[9].classList.contains("locked")
                 });
-                trackerRows.push(rowData);
             });
 
-            // Gather Missing Parts Headers & Data
             const missingHeaders = [];
             document.querySelectorAll("#missingSubHeader .mp-so input").forEach(input => {
                 missingHeaders.push(input.value);
@@ -438,10 +437,9 @@
                 tr.querySelectorAll("input").forEach(input => {
                     rowData.push(input.value);
                 });
-                missingRows.push(rowData);
+                missingRows.push({ values: rowData });
             });
 
-            // Push to Firestore
             window.setDoc(window.doc(window.db, "dashboards", "mainData"), {
                 trackerRows: trackerRows,
                 missingHeaders: missingHeaders,
@@ -449,30 +447,28 @@
             }).catch(error => console.error("Error saving to Firebase: ", error));
         }
 
-        // --- Load Data from Firebase ---
         async function loadDataFromFirebase() {
             try {
                 const docSnap = await window.getDoc(window.doc(window.db, "dashboards", "mainData"));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
 
-                    // Rebuild Tracker Table
                     const trackerTbody = document.querySelector("#trackerTable tbody");
                     trackerTbody.innerHTML = "";
                     if (data.trackerRows && data.trackerRows.length > 0) {
-                        data.trackerRows.forEach(rowData => {
+                        data.trackerRows.forEach(row => {
                             const tr = document.createElement("tr");
                             tr.innerHTML = `
-                                <td class="col-id"><input type="text" value="${rowData[0]?.value || ''}"></td>
-                                <td class="col-machine"><input type="text" value="${rowData[1]?.value || ''}"></td>
-                                <td class="col-date"><input type="date" value="${rowData[2]?.value || ''}" ${rowData[2]?.readOnly ? 'readonly' : ''} class="${rowData[2]?.locked ? 'locked' : ''}" required></td>
-                                <td class="col-date"><input type="date" value="${rowData[3]?.value || ''}" ${rowData[3]?.readOnly ? 'readonly' : ''} class="${rowData[3]?.locked ? 'locked' : ''}" required></td>
-                                <td class="col-date"><input type="date" value="${rowData[4]?.value || ''}" ${rowData[4]?.readOnly ? 'readonly' : ''} class="${rowData[4]?.locked ? 'locked' : ''}" required></td>
-                                <td class="col-date"><input type="date" value="${rowData[5]?.value || ''}" ${rowData[5]?.readOnly ? 'readonly' : ''} class="${rowData[5]?.locked ? 'locked' : ''}" required></td>
-                                <td class="col-date"><input type="date" value="${rowData[6]?.value || ''}" ${rowData[6]?.readOnly ? 'readonly' : ''} class="${rowData[6]?.locked ? 'locked' : ''}" required></td>
-                                <td><input type="text" value="${rowData[7]?.value || ''}"></td>
-                                <td class="col-date"><input type="date" value="${rowData[8]?.value || ''}" ${rowData[8]?.readOnly ? 'readonly' : ''} class="${rowData[8]?.locked ? 'locked' : ''}" required></td>
-                                <td class="col-date"><input type="date" value="${rowData[9]?.value || ''}" ${rowData[9]?.readOnly ? 'readonly' : ''} class="${rowData[9]?.locked ? 'locked' : ''}" required></td>
+                                <td class="col-id"><input type="text" value="${row.c0 || ''}"></td>
+                                <td class="col-machine"><input type="text" value="${row.c1 || ''}"></td>
+                                <td class="col-date"><input type="date" value="${row.c2 || ''}" ${row.c2_ro ? 'readonly' : ''} class="${row.c2_lk ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${row.c3 || ''}" ${row.c3_ro ? 'readonly' : ''} class="${row.c3_lk ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${row.c4 || ''}" ${row.c4_ro ? 'readonly' : ''} class="${row.c4_lk ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${row.c5 || ''}" ${row.c5_ro ? 'readonly' : ''} class="${row.c5_lk ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${row.c6 || ''}" ${row.c6_ro ? 'readonly' : ''} class="${row.c6_lk ? 'locked' : ''}" required></td>
+                                <td><input type="text" value="${row.c7 || ''}"></td>
+                                <td class="col-date"><input type="date" value="${row.c8 || ''}" ${row.c8_ro ? 'readonly' : ''} class="${row.c8_lk ? 'locked' : ''}" required></td>
+                                <td class="col-date"><input type="date" value="${row.c9 || ''}" ${row.c9_ro ? 'readonly' : ''} class="${row.c9_lk ? 'locked' : ''}" required></td>
                             `;
                             trackerTbody.appendChild(tr);
                         });
@@ -480,10 +476,8 @@
                         addTrackerRow();
                     }
 
-                    // Rebuild Missing Parts Table Headers & Rows
                     if (data.missingHeaders) {
                         const headerRow = document.getElementById('missingSubHeader');
-                        // Remove existing dynamic SO headers
                         headerRow.querySelectorAll('.mp-so').forEach(el => el.remove());
                         
                         const colspanHeader = document.getElementById('soHeaderGroup');
@@ -500,7 +494,8 @@
                     const missingTbody = document.querySelector("#missingTable tbody");
                     missingTbody.innerHTML = "";
                     if (data.missingRows && data.missingRows.length > 0) {
-                        data.missingRows.forEach(rowData => {
+                        data.missingRows.forEach(rowObj => {
+                            const rowData = rowObj.values || [];
                             const tr = document.createElement("tr");
                             let html = `
                                 <td class="mp-part"><input type="text" value="${rowData[0] || ''}"></td>
@@ -536,7 +531,6 @@
             }
         }
 
-        // --- Admin Mode Logic ---
         adminBtn.addEventListener('click', function() {
             if (!isAdminMode) {
                 const pwd = prompt("Enter Admin Password:");
@@ -569,7 +563,6 @@
             }
         });
 
-        // --- Date Selection Logic (Tracker) ---
         document.querySelector("#trackerTable tbody").addEventListener("mousedown", function(event) {
             const element = event.target;
             if (isAdminMode) return; 
@@ -602,7 +595,6 @@
             activeCell = null;
         });
 
-        // Auto-save on standard input text changes
         document.addEventListener("change", function() {
             saveDataToFirebase();
         });
@@ -613,7 +605,6 @@
             }
         }, true);
 
-        // --- Add Row Logic (Tracker) ---
         function addTrackerRow() {
             const tbody = document.querySelector("#trackerTable tbody");
             const newRow = document.createElement("tr");
@@ -634,7 +625,6 @@
             saveDataToFirebase();
         }
 
-        // --- Missing Parts: Add SO Column ---
         function addSOColumn() {
             const headerRow = document.getElementById('missingSubHeader');
             const colspanHeader = document.getElementById('soHeaderGroup');
@@ -657,7 +647,6 @@
             saveDataToFirebase();
         }
 
-        // --- Missing Parts: Add Row ---
         function addMissingRow() {
             const tbody = document.querySelector("#missingTable tbody");
             const firstRow = tbody.querySelector("tr");
